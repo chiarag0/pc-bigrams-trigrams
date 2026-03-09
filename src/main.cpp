@@ -6,6 +6,7 @@
 #include <vector>
 #include <sstream>
 #include "CharNgrams.h"
+#include "WordNgrams.h"
 
 using namespace std;
 
@@ -83,11 +84,22 @@ int main(int argc, char* argv[]) {
 
     double t = extractCharNgrams(text, 2, histogram);
     cout << "\nTime for BIGRAMS of characters: " << t << "s" << endl;
-    printTopKChar(histogram, 2, 3);
+    printTopKChars(histogram, 2, 3);
 
     t = extractCharNgrams(text, 3, histogram);
     cout << "\nTime for TRIGRAMS of characters: " << t << "s" << endl;
-    printTopKChar(histogram, 3, 3);
+    printTopKChars(histogram, 3, 3);
+
+    unordered_map<string,int> wordHistogram;
+
+    double t1 = extractWordNgrams(words, 2, wordHistogram);
+    cout << "\nTime for BIGRAMS of words: " << t1 << "s" << endl;
+    printTopKWords(wordHistogram, 10);
+
+    t1 = extractWordNgrams(words, 3, wordHistogram);
+    cout << "\nTime for TRIGRAMS of words: " << t1 << "s" << endl;
+    printTopKWords(wordHistogram, 10);
+
 
     return 0;
 }

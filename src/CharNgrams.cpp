@@ -49,7 +49,7 @@ double extractCharNgrams(const string& text, int n, vector<int>& histogram) {
     return chrono::duration<double>(end - start).count();
 }
 
-void printTopKChar(const vector<int>& histogram, int n, int k) {
+void printTopKChars(const vector<int>& histogram, int n, int k) {
     priority_queue<pair<int,int>> q;  // couple of (count, index)
     for (int i = 0; i < (int)histogram.size(); i++) {
         if (histogram[i] > 0)
@@ -62,4 +62,40 @@ void printTopKChar(const vector<int>& histogram, int n, int k) {
         q.pop();
         cout << decodeNgram(idx, n) << ": " << count << endl;
     }
+}
+
+
+double parallelExtractCharNgrams(const string& text, int n,
+                                  vector<int>& histogram, int numThreads) {
+    int numSlots = pow(37, n);
+    histogram.assign(numSlots, 0);
+
+    // each thread has its own local histogram to avoid race conditions
+    vector<vector<int>> localHists(numThreads, vector<int>(numSlots, 0));
+
+    auto start = chrono::high_resolution_clock::now();
+
+    #pragma omp parallel num_threads(numThreads)
+    {
+        int id = omp_get_thread_num();
+        vector<int>& local = localHists[id];
+
+        #pragma omp for schedule(static)  // divide in equal chunks among threads
+        for (int p = 0; p <= (int)text.size() - n; p++) {
+            int idx = encodeNgram(text, p, n);
+            if (idx >= 0) local[idx]++;
+        }
+    }
+
+    // one thread merges local histograms into the global histogram
+    // only sums, no need for parallelization
+    for (int t = 0; t < numThreads; t++) {
+        for (int i = 0; i < numSlots; i++) {
+            histogram[i] += localHists[t][i];
+        }
+    }
+
+    // measure time after merging
+    auto end = chrono::high_resolution_clock::now();
+    return chrono::duration<double>(end - start).count();
 }
