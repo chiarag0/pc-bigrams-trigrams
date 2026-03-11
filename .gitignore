@@ -2,3 +2,4 @@ data/JaneEyre_x*.txt
 data/JaneEyre.txt
 src/main
 src/buildCorpus
+results/

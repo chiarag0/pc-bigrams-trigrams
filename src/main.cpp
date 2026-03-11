@@ -7,6 +7,8 @@
 #include <sstream>
 #include "CharNgrams.h"
 #include "WordNgrams.h"
+#include "Benchmark.h"
+#include "Validation.h"
 
 using namespace std;
 
@@ -80,26 +82,41 @@ int main(int argc, char* argv[]) {
     cout << "N. of characters: " << text.size() << endl;
     cout << "N. of words:      " << words.size() << endl;
 
+    system("mkdir -p ../results");
+    ofstream csv("../results/benchmark.csv");
+    csv << "type,n,threads,schedule,chunk,wall_mean,wall_std,wall_min,wall_max,cpu_mean,speedup\n";
+
+    // sequential baselines
     vector<int> histogram;
-
-    double t = extractCharNgrams(text, 2, histogram);
-    cout << "\nTime for BIGRAMS of characters: " << t << "s" << endl;
-    printTopKChars(histogram, 2, 3);
-
-    t = extractCharNgrams(text, 3, histogram);
-    cout << "\nTime for TRIGRAMS of characters: " << t << "s" << endl;
-    printTopKChars(histogram, 3, 3);
-
     unordered_map<string,int> wordHistogram;
 
-    double t1 = extractWordNgrams(words, 2, wordHistogram);
-    cout << "\nTime for BIGRAMS of words: " << t1 << "s" << endl;
-    printTopKWords(wordHistogram, 10);
+    cout << "\n=== Sequential baselines ===" << endl;
+    double seqChar2 = meanSeqChar(text, 2, histogram);
+    double seqChar3 = meanSeqChar(text, 3, histogram);
+    double seqWord2 = meanSeqWord(words, 2, wordHistogram);
+    double seqWord3 = meanSeqWord(words, 3, wordHistogram);
 
-    t1 = extractWordNgrams(words, 3, wordHistogram);
-    cout << "\nTime for TRIGRAMS of words: " << t1 << "s" << endl;
-    printTopKWords(wordHistogram, 10);
+    // parallel char benchmark
+    cout << "\n=== Char n-gram parallel benchmark ===" << endl;
+    for (int threads : {1, 2, 4, 8, 14, 16}) {
+        runCharBenchmark(text, 2, threads, seqChar2, csv);
+        runCharBenchmark(text, 3, threads, seqChar3, csv);
+    }
 
+    // parallel word benchmark
+    cout << "\n=== Word n-gram parallel benchmark ===" << endl;
+    for (int threads : {1, 2, 4, 8, 14, 16}) {
+        for (int sched : {0, 1, 2}) {
+            for (int chunk : {0, 64, 512, 4096}) {
+                if (sched == 2 && chunk != 0) continue;
+                runWordBenchmark(words, 2, threads, sched, chunk, seqWord2, csv);
+                runWordBenchmark(words, 3, threads, sched, chunk, seqWord3, csv);
+            }
+        }
+    }
+
+    csv.close();
+    cout << "\nResults saved to ../results/benchmark.csv" << endl;
 
     return 0;
 }
