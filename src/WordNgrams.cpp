@@ -63,6 +63,13 @@ double parallelExtractWordNgrams(const vector<string>& words, int n,
                     for (int j = 1; j < n; j++) { ngram += ' '; ngram += words[i+j]; }
                     local[ngram]++;
                 }
+            } else if (chunkSize == 64) {  // fixed chunk size (small)
+                #pragma omp for schedule(static, 64)
+                for (int i = 0; i <= (int)words.size() - n; i++) {
+                    string ngram = words[i];
+                    for (int j = 1; j < n; j++) { ngram += ' '; ngram += words[i+j]; }
+                    local[ngram]++;
+                }    
             } else if (chunkSize == 512) {  // fixed chunk size (medium)
                 #pragma omp for schedule(static, 512)
                 for (int i = 0; i <= (int)words.size() - n; i++) {
@@ -81,6 +88,13 @@ double parallelExtractWordNgrams(const vector<string>& words, int n,
         } else if (scheduleType == 1) {  // dynamic scheduling
             if (chunkSize == 0) {
                 #pragma omp for schedule(dynamic)
+                for (int i = 0; i <= (int)words.size() - n; i++) {
+                    string ngram = words[i];
+                    for (int j = 1; j < n; j++) { ngram += ' '; ngram += words[i+j]; }
+                    local[ngram]++;
+                }
+            } else if (chunkSize == 64) {
+                #pragma omp for schedule(dynamic, 64)  // fixed chunk size (small)
                 for (int i = 0; i <= (int)words.size() - n; i++) {
                     string ngram = words[i];
                     for (int j = 1; j < n; j++) { ngram += ' '; ngram += words[i+j]; }

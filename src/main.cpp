@@ -82,6 +82,32 @@ int main(int argc, char* argv[]) {
     cout << "N. of characters: " << text.size() << endl;
     cout << "N. of words:      " << words.size() << endl;
 
+    // Validate correctess of parallel implementations against sequential baselines
+    // Using file JaneEyre.txt (small corpus)
+    cout << "\n=== Validation ===" << endl;
+    string valText = cleanText("../data/JaneEyre.txt");
+    vector<string> valWords = getWords(valText);
+    vector<int> seqCharHist, parCharHist;
+    unordered_map<string,int> seqWordHist, parWordHist;
+    extractCharNgrams(valText, 2, seqCharHist);    
+    extractCharNgrams(valText, 3, seqCharHist);
+    parallelExtractCharNgrams(valText, 2, parCharHist, 4); // using 4 threads for validation
+    parallelExtractCharNgrams(valText, 3, parCharHist, 4);
+
+    extractWordNgrams(valWords, 2, seqWordHist);
+    extractWordNgrams(valWords, 3, seqWordHist);
+    parallelExtractWordNgrams(valWords, 2, parWordHist, 4, 0, 0); // using 4 threads and static scheduling for validation
+    parallelExtractWordNgrams(valWords, 3, parWordHist, 4, 0, 0);
+
+    bool charValid = validateChar(seqCharHist, parCharHist);
+    bool wordValid = validateWord(seqWordHist, parWordHist);        
+    if (charValid && wordValid) {
+        cout << "Validation passed: parallel results match sequential baselines" << endl;
+    } else {
+        cerr << "Validation failed: parallel results do not match sequential baselines" << endl;
+        return 1;
+    }
+
     system("mkdir -p ../results");
     ofstream csv("../results/benchmark.csv");
     csv << "type,n,threads,schedule,chunk,wall_mean,wall_std,wall_min,wall_max,cpu_mean,speedup\n";
@@ -118,5 +144,5 @@ int main(int argc, char* argv[]) {
     csv.close();
     cout << "\nResults saved to ../results/benchmark.csv" << endl;
 
-    return 0;
+    return 0;    
 }
